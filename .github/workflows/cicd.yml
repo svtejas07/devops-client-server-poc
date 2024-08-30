@@ -1,0 +1,64 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build-client:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v2
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: '14'
+
+      - name: Install Dependencies and Build Client
+        run: |
+          cd client
+          npm install
+          npm run build
+
+  build-server:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v2
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: '14'
+
+      - name: Install Dependencies and Start Server
+        run: |
+          cd server
+          npm install
+          node index.js
+
+  dockerize:
+    needs: [build-client, build-server]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v2
+
+      - name: Build Docker Images
+        run: |
+          docker build -t my-app-client ./client
+          docker build -t my-app-server ./server
+
+      - name: Push Docker Images (Optional)
+        run: |
+          docker tag my-app-client mydockerhubuser/my-app-client:latest
+          docker tag my-app-server mydockerhubuser/my-app-server:latest
+          echo "$DOCKER_PASSWORD" | docker login --username "$DOCKER_USERNAME" --password-stdin
+          docker push mydockerhubuser/my-app-client:latest
+          docker push mydockerhubuser/my-app-server:latest
